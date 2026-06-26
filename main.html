@@ -1,0 +1,89 @@
+#include "ArduinoGraphics.h" 
+#include "Arduino_LED_Matrix.h"
+#include <ArduinoBLE.h>
+
+ArduinoLEDMatrix matrix;
+String wiadomosc = "GITHUB START";
+
+// Usługa i cecha BLE
+BLEService smartwatchService("19b10000-e8f2-537e-4f6c-d104768a1214");
+BLEStringCharacteristic controlCharacteristic("19b10001-e8f2-537e-4f6c-d104768a1214", BLEWrite | BLENotify, 32);
+
+void wyswietlTekst(String txt) {
+  String pelnyTekst = "  " + txt + "  ";
+  matrix.beginDraw();
+  matrix.clear();
+  matrix.textFont(Font_5x7);
+  matrix.textScrollSpeed(80);
+  matrix.beginText(0, 1, 0xFFFFFF);
+  matrix.print(pelnyTekst.c_str());
+  matrix.endText(SCROLL_LEFT);
+  matrix.endDraw();
+}
+
+void setup() {
+  Serial.begin(115200);
+  matrix.begin();
+
+  // Sprawdzenie modułu BLE
+  if (!BLE.begin()) {
+    wiadomosc = "BLE BLAD";
+    while (1) { wyswietlTekst(wiadomosc); }
+  }
+
+  // Ustawienie nazwy widocznej dla telefonów
+  BLE.setLocalName("Smartwatch_R4");
+  BLE.setDeviceName("Smartwatch_R4"); // Dodatkowe wymuszenie nazwy urządzenia
+  
+  // Przypisanie usługi
+  BLE.setAdvertisedService(smartwatchService);
+  smartwatchService.addCharacteristic(controlCharacteristic);
+  BLE.addService(smartwatchService);
+  
+  // DODANE: Wymuszenie dodania nazwy do pakietu rozgłoszeniowego (Scan Response)
+  BLEAdvertisingData scanResponse;
+  scanResponse.setLocalName("Smartwatch_R4");
+  BLE.setScanResponseData(scanResponse);
+  
+  controlCharacteristic.writeValue("START");
+  
+  // Uruchomienie nadawania sygnału
+  BLE.advertise();
+}
+
+void loop() {
+  BLEDevice central = BLE.central();
+
+  if (central) {
+    wiadomosc = "OK";
+    while (central.connected()) {
+      if (controlCharacteristic.written()) {
+        String incomingData = controlCharacteristic.value();
+
+        if (incomingData.startsWith("D")) {
+          int podkreslenie = incomingData.indexOf('_');
+          int pin = incomingData.substring(1, podkreslenie).toInt();
+          int stan = incomingData.substring(podkreslenie + 1).toInt();
+          pinMode(pin, OUTPUT);
+          digitalWrite(pin, stan);
+          wiadomosc = "PIN " + String(pin) + (stan ? " ON" : " OFF");
+        } 
+        else if (incomingData.startsWith("P")) {
+          int podkreslenie = incomingData.indexOf('_');
+          int pin = incomingData.substring(1, podkreslenie).toInt();
+          int wartosc = incomingData.substring(podkreslenie + 1).toInt();
+          pinMode(pin, OUTPUT);
+          analogWrite(pin, wartosc);
+          float volty = (wartosc / 255.0) * 5.0;
+          wiadomosc = "PIN" + String(pin) + " " + String(volty, 1) + "V";
+        } 
+        else {
+          wiadomosc = incomingData;
+        }
+      }
+      wyswietlTekst(wiadomosc);
+    }
+    wiadomosc = "DISCONNECTED";
+  }
+  wyswietlTekst(wiadomosc);
+}
