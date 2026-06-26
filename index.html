@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smartwatch R4 Controller</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background: #1e1e24; color: #fff; }
+        .card { background: #2a2a35; padding: 20px; margin: 15px auto; border-radius: 10px; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        input[type=text], select { width: 90%; padding: 12px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: none; background: #3a3a4a; color: #fff; }
+        input[type=range] { width: 90%; margin: 15px 0; }
+        button { background: #ff4757; color: white; padding: 12px; border: none; border-radius: 5px; font-size: 16px; width: 90%; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .btn-connect { background: #1e90ff; }
+        .btn-on { background: #2ed573; }
+        .btn-off { background: #ff4757; }
+        #status { color: #ffa500; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>Smartwatch R4 GitHub Panel</h2>
+    <p>Status: <span id="status">Rozłączono</span></p>
+    
+    <div class="card">
+        <button class="btn-connect" onclick="connectBLE()">🔗 POŁĄCZ Z BLUETOOTH</button>
+    </div>
+
+    <!-- SEKCJA 1: Wyświetlacz -->
+    <div class="card">
+        <h3>💬 Powiadomienie</h3>
+        <input type="text" id="msgInput" placeholder="Wpisz tekst..." value="SIEMA">
+        <button onclick="sendData(document.getElementById('msgInput').value)">WYŚLIJ NA ZEGAREK</button>
+    </div>
+
+    <!-- SEKCJA 2: Cyfrowe ON/OFF -->
+    <div class="card">
+        <h3>🔌 Sterowanie Cyfrowe (ON/OFF)</h3>
+        <label>Wybierz Pin:</label><br>
+        <select id="digitalPin">
+            <!-- Dynamiczne generowanie pinów od 2 do 13 -->
+            <script>
+                for(let i=2; i<=13; i++) {
+                    document.write(`<option value="${i}">Pin ${i}</option>`);
+                }
+            </script>
+        </select><br><br>
+        <button class="btn-on" onclick="setDigital(1)">WŁĄCZ (HIGH)</button>
+        <button class="btn-off" onclick="setDigital(0)">WYŁĄCZ (LOW)</button>
+    </div>
+
+    <!-- SEKCJA 3: Regulacja PWM -->
+    <div class="card">
+        <h3>🎛️ Regulacja Napięcia (PWM)</h3>
+        <label>Wybierz Pin PWM:</label><br>
+        <select id="pwmPin">
+            <option value="3">Pin 3</option>
+            <option value="5">Pin 5</option>
+            <option value="6">Pin 6</option>
+            <option value="9">Pin 9</option>
+            <option value="10">Pin 10</option>
+            <option value="11">Pin 11</option>
+        </select><br><br>
+        <label>Wypełnienie (0 - 255):</label><br>
+        <input type="range" id="pwmSlider" min="0" max="255" value="128" oninput="this.nextElementSibling.value = this.value">
+        <output>128</output><br><br>
+        <button style="background:#1e90ff;" onclick="setPWM()">USTAW PWM</button>
+    </div>
+
+    <script>
+        let bluetoothCharacteristic = null;
+
+        // Łączenie z Arduino przy użyciu Web Bluetooth API
+        async function connectBLE() {
+            const serviceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
+            const characteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1214";
+
+            try {
+                document.getElementById('status').innerText = "Wyszukiwanie...";
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Smartwatch_R4' }],
+                    optionalServices: [serviceUuid]
+                });
+
+                document.getElementById('status').innerText = "Łączenie...";
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(serviceUuid);
+                bluetoothCharacteristic = await service.getCharacteristic(characteristicUuid);
+
+                document.getElementById('status').innerText = "Połączono pomyślnie!";
+                document.getElementById('status').style.color = "#2ed573";
+            } catch (error) {
+                console.log(error);
+                document.getElementById('status').innerText = "Błąd połączenia";
+                document.getElementById('status').style.color = "#ff4757";
+            }
+        }
+
+        // Funkcja wysyłająca surowy ciąg tekstowy przez BLE
+        async function sendData(text) {
+            if (!bluetoothCharacteristic) {
+                alert("Najpierw połącz się z Bluetooth!");
+                return;
+            }
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            await bluetoothCharacteristic.writeValue(data);
+        }
+
+        // Przygotowanie komendy cyfrowej (np. D13_1)
+        function setDigital(state) {
+            const pin = document.getElementById('digitalPin').value;
+            sendData(`D${pin}_${state}`);
+        }
+
+        // Przygotowanie komendy PWM (np. P3_128)
+        function setPWM() {
+            const pin = document.getElementById('pwmPin').value;
+            const val = document.getElementById('pwmSlider').value;
+            sendData(`P${pin}_${val}`);
+        }
+    </script>
+</body>
+</html>
