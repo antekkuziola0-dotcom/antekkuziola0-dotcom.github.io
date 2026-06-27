@@ -3,120 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smartwatch R4 Controller</title>
+    <title>⚡ R4 Multi-Macro OS</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; background: #1e1e24; color: #fff; }
-        .card { background: #2a2a35; padding: 20px; margin: 15px auto; border-radius: 10px; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        input[type=text], select { width: 90%; padding: 12px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: none; background: #3a3a4a; color: #fff; }
-        input[type=range] { width: 90%; margin: 15px 0; }
-        button { background: #ff4757; color: white; padding: 12px; border: none; border-radius: 5px; font-size: 16px; width: 90%; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        .btn-connect { background: #1e90ff; }
-        .btn-on { background: #2ed573; }
-        .btn-off { background: #ff4757; }
-        #status { color: #ffa500; font-weight: bold; }
+        :root {
+            --bg-color: #060711;
+            --card-bg: #0f1122;
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --accent-purple: #7209b7;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --text-main: #ffffff;
+            --text-muted: #6c7d98;
+        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h2 { font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; background: linear-gradient(45deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sub-header { color: var(--text-muted); font-size: 13px; margin-bottom: 25px; }
+        .status-container { font-size: 13px; font-weight: bold; background: rgba(255,165,0,0.08); border: 1px solid rgba(255,165,0,0.2); padding: 8px 24px; border-radius: 50px; color: #ffa500; margin-bottom: 20px; }
+        .card { background: var(--card-bg); width: 100%; max-width: 450px; padding: 24px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.02); margin-bottom: 20px; box-sizing: border-box; text-align: left; }
+        .card h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--secondary); margin-bottom: 15px; }
+        input[type=text], select { width: 100%; padding: 13px; margin: 6px 0 14px 0; font-size: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); background: #171932; color: #fff; box-sizing: border-box; outline: none; }
+        .slider-wrapper { display: flex; align-items: center; gap: 15px; margin: 6px 0 14px 0; }
+        input[type=range] { flex: 1; -webkit-appearance: none; background: #171932; height: 6px; border-radius: 5px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; }
+        button { background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%); color: white; padding: 13px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; width: 100%; cursor: pointer; margin-bottom: 8px; }
+        .btn-sub { background: #1d2147; color: var(--primary); border: 1px solid rgba(0, 242, 254, 0.2); }
+        .btn-add { background: linear-gradient(135deg, var(--accent-purple) 0%, #560bad 100%); }
+        .btn-panic { background: #ff4757; }
+        .bucket-list { background: #13152c; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; border-left: 3px solid var(--primary); }
+        .shortcut-item { background: #171932; padding: 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .shortcut-info { font-size: 14px; }
+        .shortcut-info div { font-size: 11px; color: var(--text-muted); margin-top: 3px; white-space: pre-line; }
+        .btn-run { width: auto; padding: 8px 16px; font-size: 12px; background: var(--accent-green); margin: 0; }
+        .data-display { background: #171932; padding: 16px; border-radius: 10px; text-align: center; font-family: monospace; font-size: 24px; font-weight: bold; color: var(--primary); text-shadow: 0 0 8px var(--primary); }
     </style>
 </head>
 <body>
 
-    <h2>Smartwatch R4 GitHub Panel</h2>
-    <p>Status: <span id="status">Rozłączono</span></p>
+    <h2>⚡ R4 OS</h2>
+    <div class="sub-header">System Super-Skrótów Wielozadaniowych</div>
     
-    <div class="card">
-        <button class="btn-connect" onclick="connectBLE()">🔗 POŁĄCZ Z BLUETOOTH</button>
+    <div class="status-container" id="statusBox">🔴 Magistrala BLE zablokowana</div>
+    
+    <div class="card" style="text-align: center;">
+        <button onclick="connectBLE()">🔗 URUCHOM SYGNAŁ BLE</button>
     </div>
 
-    <!-- SEKCJA 1: Wyświetlacz -->
+    <!-- KREATOR MULTI-SKRÓTÓW -->
     <div class="card">
-        <h3>💬 Powiadomienie</h3>
-        <input type="text" id="msgInput" placeholder="Wpisz tekst..." value="SIEMA">
-        <button onclick="sendData(document.getElementById('msgInput').value)">WYŚLIJ NA ZEGAREK</button>
+        <h3>🛠️ Kreator Skrótów Wielozadaniowych</h3>
+        
+        <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px; margin-bottom: 15px;">
+            <span style="font-size: 12px; color: var(--primary); font-weight: bold;">KROK 1: Dodaj pojedyncze akcje do pamięci podręcznej</span><br><br>
+            
+            <label>Wybierz Port (Pin):</label>
+            <select id="actionPin">
+                <script>for(let i=2; i<=13; i++) document.write(`<option value="${i}">Pin ${i}</option>`);</script>
+            </select>
+
+            <label>Jasność / Napięcie PWM:</label>
+            <div class="slider-wrapper">
+                <input type="range" id="actionVal" min="0" max="255" value="255" oninput="this.nextElementSibling.value = this.value">
+                <output style="font-family: monospace; width:30px;">255</output>
+            </div>
+
+            <label>Efekt pracy linii:</label>
+            <select id="actionMode">
+                <option value="0">Stałe zasilanie (ON)</option>
+                <option value="1">Miganie (Stroboskop)</option>
+                <option value="2">Pulsowanie (Oddech)</option>
+            </select>
+            
+            <button class="btn-sub" onclick="addActionToBucket()">➕ DODAJ AKCJĘ DO KOSZYKA</button>
+        </div>
+
+        <div id="bucketContainer" style="display:none;">
+            <label>Zawartość koszyka akcji:</label>
+            <div class="bucket-list" id="bucketList"></div>
+            
+            <label>KROK 2: Nadaj nazwę i zapisz cały skrót:</label>
+            <input type="text" id="macroName" placeholder="np. Tryb Impreza, Reset Warsztatu">
+            <button class="btn-add" onclick="saveSuperShortcut()">💾 ZAPISZ CAŁY SUPER-SKRÓT</button>
+        </div>
     </div>
 
-    <!-- SEKCJA 2: Cyfrowe ON/OFF -->
+    <!-- PANEL SKRÓTÓW -->
     <div class="card">
-        <h3>🔌 Sterowanie Cyfrowe (ON/OFF)</h3>
-        <label>Wybierz Pin:</label><br>
-        <select id="digitalPin">
-            <!-- Dynamiczne generowanie pinów od 2 do 13 -->
+        <h3>📱 Panel Aktywnych Super-Skrótów</h3>
+        <div id="shortcutsContainer">
+            <p id="emptyPrompt" style="font-size: 13px; color: var(--text-muted); text-align: center; margin: 5px 0;">Koszyk skrótów jest pusty.</p>
+        </div>
+    </div>
+
+    <!-- SKANER WEJŚĆ -->
+    <div class="card" style="border: 1px solid rgba(0, 242, 254, 0.12);">
+        <h3>🔍 Uniwersalny Skaner Wejść (Czujniki)</h3>
+        <label>Wybierz Pin wejściowy:</label>
+        <select id="readPin" onchange="sendReadConfig()">
+            <option value="NONE">-- Wyłączone --</option>
             <script>
-                for(let i=2; i<=13; i++) {
-                    document.write(`<option value="${i}">Pin ${i}</option>`);
-                }
+                for(let i=2; i<=13; i++) document.write(`<option value="${i}">Pin Cyfrowy ${i}</option>`);
+                for(let i=0; i<=5; i++) document.write(`<option value="A${i}">Pin Analogowy A${i}</option>`);
             </script>
-        </select><br><br>
-        <button class="btn-on" onclick="setDigital(1)">WŁĄCZ (HIGH)</button>
-        <button class="btn-off" onclick="setDigital(0)">WYŁĄCZ (LOW)</button>
+        </select>
+
+        <label>Sposób próbkowania danych:</label>
+        <select id="readType" onchange="sendReadConfig()">
+            <option value="1">Cyfrowy (0 lub 1 - np. Czujnik PIR, Stan niski/wysoki)</option>
+            <option value="2">Analogowy (0 do 1023 - np. Fotorezystor, Sensor gazu)</option>
+        </select>
+
+        <div class="data-display" id="liveDataDisplay">---</div>
     </div>
 
-    <!-- SEKCJA 3: Regulacja PWM -->
-    <div class="card">
-        <h3>🎛️ Regulacja Napięcia (PWM)</h3>
-        <label>Wybierz Pin PWM:</label><br>
-        <select id="pwmPin">
-            <option value="3">Pin 3</option>
-            <option value="5">Pin 5</option>
-            <option value="6">Pin 6</option>
-            <option value="9">Pin 9</option>
-            <option value="10">Pin 10</option>
-            <option value="11">Pin 11</option>
-        </select><br><br>
-        <label>Wypełnienie (0 - 255):</label><br>
-        <input type="range" id="pwmSlider" min="0" max="255" value="128" oninput="this.nextElementSibling.value = this.value">
-        <output>128</output><br><br>
-        <button style="background:#1e90ff;" onclick="setPWM()">USTAW PWM</button>
+    <div class="card" style="text-align: center; background: rgba(255, 71, 87, 0.02);">
+        <button class="btn-panic" onclick="panicReset()">🛑 ZEROWANIE SYSTEMU</button>
     </div>
 
     <script>
         let bluetoothCharacteristic = null;
+        let currentBucket = []; // Koszyk na akcje w budowanym skrócie
+        let superShortcuts = []; // Zapisane super-skróty
 
-        // Łączenie z Arduino przy użyciu Web Bluetooth API
         async function connectBLE() {
             const serviceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
             const characteristicUuid = "19b10001-e8f2-537e-4f6c-d104768a1214";
-
             try {
-                document.getElementById('status').innerText = "Wyszukiwanie...";
+                document.getElementById('statusBox').innerText = "🟡 Wyszukiwanie...";
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ name: 'Smartwatch_R4' }],
-                    optionalServices: [serviceUuid]
+                    filters: [{ name: 'Smartwatch_R4' }], optionalServices: [serviceUuid]
                 });
-
-                document.getElementById('status').innerText = "Łączenie...";
                 const server = await device.gatt.connect();
                 const service = await server.getPrimaryService(serviceUuid);
                 bluetoothCharacteristic = await service.getCharacteristic(characteristicUuid);
 
-                document.getElementById('status').innerText = "Połączono pomyślnie!";
-                document.getElementById('status').style.color = "#2ed573";
-            } catch (error) {
-                console.log(error);
-                document.getElementById('status').innerText = "Błąd połączenia";
-                document.getElementById('status').style.color = "#ff4757";
-            }
+                await bluetoothCharacteristic.startNotifications();
+                bluetoothCharacteristic.addEventListener('characteristicvaluechanged', (e) => {
+                    const data = new TextDecoder().decode(e.target.value);
+                    if(data.startsWith("VAL:")) document.getElementById('liveDataDisplay').innerText = data.substring(4);
+                });
+                document.getElementById('statusBox').innerText = "🟢 System Połączony (BLE)";
+                document.getElementById('statusBox').style.color = "#2ed573";
+            } catch (e) { document.getElementById('statusBox').innerText = "🔴 Brak autoryzacji BLE"; }
         }
 
-        // Funkcja wysyłająca surowy ciąg tekstowy przez BLE
         async function sendData(text) {
-            if (!bluetoothCharacteristic) {
-                alert("Najpierw połącz się z Bluetooth!");
+            if (!bluetoothCharacteristic) return;
+            await bluetoothCharacteristic.writeValue(new TextEncoder().encode(text));
+        }
+
+        // Dodawanie pojedynczej pod-akcji do koszyka
+        function addActionToBucket() {
+            const pin = document.getElementById('actionPin').value;
+            const val = document.getElementById('actionVal').value;
+            const mode = document.getElementById('actionMode').value;
+            const modeTxt = document.getElementById('actionMode').options[document.getElementById('actionMode').selectedIndex].text;
+
+            currentBucket.push({ pin, val, mode, modeTxt });
+            
+            // Renderowanie podglądu koszyka
+            const list = document.getElementById('bucketList');
+            list.innerHTML = currentBucket.map(a => `• Pin ${a.pin} -> Moc: ${a.val} (${a.modeTxt})`).join('<br>');
+            document.getElementById('bucketContainer').style.display = "block";
+        }
+
+        // Zapisywanie całego pakietu z koszyka jako jeden super-skrót
+        function saveSuperShortcut() {
+            const name = document.getElementById('macroName').value || "Super Skrót";
+            if(currentBucket.length === 0) return;
+            superShortcuts.push({ name, actions: [...currentBucket] });
+            // Reset koszyka kreatora
+            currentBucket = [];
+            document.getElementById('bucketContainer').style.display = "none";
+            document.getElementById('macroName').value = "";
+            renderSuperShortcuts();
+        }
+
+        function renderSuperShortcuts() {
+            const container = document.getElementById('shortcutsContainer');
+            container.innerHTML = "";
+            if(superShortcuts.length === 0) {
+                container.innerHTML = `<p style="font-size: 13px; color: var(--text-muted); text-align: center; margin: 5px 0;">Koszyk skrótów jest pusty.</p>`;
                 return;
             }
-            const encoder = new TextEncoder();
-            const data = encoder.encode(text);
-            await bluetoothCharacteristic.writeValue(data);
+            superShortcuts.forEach((sc, idx) => {
+                const desc = sc.actions.map(a => `• Pin ${a.pin} (${a.modeTxt}, PWM: ${a.val})`).join('\n');
+                const div = document.createElement('div');
+                div.className = "shortcut-item";
+                div.innerHTML = `<div class="shortcut-info"> <strong>${sc.name}</strong> <div>${desc}</div> </div> <button class="btn-run" onclick="runSuperShortcut(${idx})">ODPAL ALL</button>`;
+                container.appendChild(div);
+            });
         }
 
-        // Przygotowanie komendy cyfrowej (np. D13_1)
-        function setDigital(state) {
-            const pin = document.getElementById('digitalPin').value;
-            sendData(`D${pin}_${state}`);
+        function runSuperShortcut(idx) {
+            const sc = superShortcuts[idx];
+            // Pakowanie danych do formatu "SHORT_P:3,V:255,M:1;P:5,V:128,M:2;"
+            const cmd = "SHORT_" + sc.actions.map(a => `P:${a.pin},V:${a.val},M:${a.mode}`).join(';');
+            sendData(cmd);
         }
 
-        // Przygotowanie komendy PWM (np. P3_128)
-        function setPWM() {
-            const pin = document.getElementById('pwmPin').value;
-            const val = document.getElementById('pwmSlider').value;
-            sendData(`P${pin}_${val}`);
+        function sendReadConfig() {
+            const pin = document.getElementById('readPin').value;
+            const type = document.getElementById('readType').value;
+            if(pin === "NONE") { 
+                sendData("READ_NONE_0"); 
+                document.getElementById('liveDataDisplay').innerText = "---"; 
+            } else { 
+                sendData(`READ_${pin}_${type}`); 
+            }
+        }
+
+        function panicReset() {
+            sendData("RESET"); 
+            superShortcuts = []; 
+            currentBucket = []; 
+            renderSuperShortcuts();
+            document.getElementById('bucketContainer').style.display = "none";
+            document.getElementById('readPin').value = "NONE"; 
+            document.getElementById('liveDataDisplay').innerText = "---";
         }
     </script>
 </body>
