@@ -30,12 +30,16 @@
         .btn-sub { background: #1d2147; color: var(--primary); border: 1px solid rgba(0, 242, 254, 0.2); }
         .btn-add { background: linear-gradient(135deg, var(--accent-purple) 0%, #560bad 100%); }
         .btn-panic { background: #ff4757; }
-        .bucket-list { background: #13152c; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; border-left: 3px solid var(--primary); }
+        .bucket-list { background: #13152c; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; border-left: 3px solid var(--primary); max-height: 150px; overflow-y: auto; }
         .shortcut-item { background: #171932; padding: 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .shortcut-info { font-size: 14px; }
         .shortcut-info div { font-size: 11px; color: var(--text-muted); margin-top: 3px; white-space: pre-line; }
         .btn-run { width: auto; padding: 8px 16px; font-size: 12px; background: var(--accent-green); margin: 0; }
         .data-display { background: #171932; padding: 16px; border-radius: 10px; text-align: center; font-family: monospace; font-size: 24px; font-weight: bold; color: var(--primary); text-shadow: 0 0 8px var(--primary); }
+        .param-group { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin: 8px 0; }
+        .param-group label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 2px; }
+        .param-group .slider-wrapper { margin: 4px 0; }
+        .param-group .slider-wrapper output { font-family: monospace; width: 35px; font-size: 13px; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -68,11 +72,36 @@
             </div>
 
             <label>Efekt pracy linii:</label>
-            <select id="actionMode">
+            <select id="actionMode" onchange="toggleTimingParams()">
                 <option value="0">Stałe zasilanie (ON)</option>
                 <option value="1">Miganie (Stroboskop)</option>
                 <option value="2">Pulsowanie (Oddech)</option>
             </select>
+
+            <!-- Parametry czasowe dla migania -->
+            <div id="timingParams" style="display: none; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                <div class="param-group">
+                    <label>⏱️ Czas WŁĄCZONY (ms) – dla migania</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="timeOn" min="50" max="2000" value="200" step="10" oninput="this.nextElementSibling.value = this.value">
+                        <output>200</output>
+                    </div>
+                </div>
+                <div class="param-group">
+                    <label>⏱️ Czas WYŁĄCZONY (ms) – dla migania</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="timeOff" min="50" max="2000" value="200" step="10" oninput="this.nextElementSibling.value = this.value">
+                        <output>200</output>
+                    </div>
+                </div>
+                <div class="param-group">
+                    <label>🌊 Czas narastania/opadania (ms) – dla pulsowania</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="timeRamp" min="100" max="5000" value="1000" step="50" oninput="this.nextElementSibling.value = this.value">
+                        <output>1000</output>
+                    </div>
+                </div>
+            </div>
             
             <button class="btn-sub" onclick="addActionToBucket()">➕ DODAJ AKCJĘ DO KOSZYKA</button>
         </div>
@@ -122,8 +151,15 @@
 
     <script>
         let bluetoothCharacteristic = null;
-        let currentBucket = []; // Koszyk na akcje w budowanym skrócie
-        let superShortcuts = []; // Zapisane super-skróty
+        let currentBucket = [];
+        let superShortcuts = [];
+
+        // Pokazuje/ukrywa parametry czasowe w zależności od wybranego trybu
+        function toggleTimingParams() {
+            const mode = document.getElementById('actionMode').value;
+            const params = document.getElementById('timingParams');
+            params.style.display = (mode === '1' || mode === '2') ? 'block' : 'none';
+        }
 
         async function connectBLE() {
             const serviceUuid = "19b10000-e8f2-537e-4f6c-d104768a1214";
@@ -152,27 +188,36 @@
             await bluetoothCharacteristic.writeValue(new TextEncoder().encode(text));
         }
 
-        // Dodawanie pojedynczej pod-akcji do koszyka
         function addActionToBucket() {
             const pin = document.getElementById('actionPin').value;
             const val = document.getElementById('actionVal').value;
             const mode = document.getElementById('actionMode').value;
             const modeTxt = document.getElementById('actionMode').options[document.getElementById('actionMode').selectedIndex].text;
 
-            currentBucket.push({ pin, val, mode, modeTxt });
+            // Pobieranie parametrów czasowych
+            const timeOn = document.getElementById('timeOn').value;
+            const timeOff = document.getElementById('timeOff').value;
+            const timeRamp = document.getElementById('timeRamp').value;
+
+            currentBucket.push({ 
+                pin, val, mode, modeTxt,
+                timeOn, timeOff, timeRamp 
+            });
             
-            // Renderowanie podglądu koszyka
             const list = document.getElementById('bucketList');
-            list.innerHTML = currentBucket.map(a => `• Pin ${a.pin} -> Moc: ${a.val} (${a.modeTxt})`).join('<br>');
+            list.innerHTML = currentBucket.map(a => {
+                let extra = '';
+                if (a.mode === '1') extra = `, ON:${a.timeOn}ms OFF:${a.timeOff}ms`;
+                if (a.mode === '2') extra = `, Rampa:${a.timeRamp}ms`;
+                return `• Pin ${a.pin} -> Moc: ${a.val} (${a.modeTxt}${extra})`;
+            }).join('<br>');
             document.getElementById('bucketContainer').style.display = "block";
         }
 
-        // Zapisywanie całego pakietu z koszyka jako jeden super-skrót
         function saveSuperShortcut() {
             const name = document.getElementById('macroName').value || "Super Skrót";
             if(currentBucket.length === 0) return;
             superShortcuts.push({ name, actions: [...currentBucket] });
-            // Reset koszyka kreatora
             currentBucket = [];
             document.getElementById('bucketContainer').style.display = "none";
             document.getElementById('macroName').value = "";
@@ -187,7 +232,12 @@
                 return;
             }
             superShortcuts.forEach((sc, idx) => {
-                const desc = sc.actions.map(a => `• Pin ${a.pin} (${a.modeTxt}, PWM: ${a.val})`).join('\n');
+                const desc = sc.actions.map(a => {
+                    let extra = '';
+                    if (a.mode === '1') extra = `, ON:${a.timeOn}ms OFF:${a.timeOff}ms`;
+                    if (a.mode === '2') extra = `, Rampa:${a.timeRamp}ms`;
+                    return `• Pin ${a.pin} (${a.modeTxt}${extra}, PWM: ${a.val})`;
+                }).join('\n');
                 const div = document.createElement('div');
                 div.className = "shortcut-item";
                 div.innerHTML = `<div class="shortcut-info"> <strong>${sc.name}</strong> <div>${desc}</div> </div> <button class="btn-run" onclick="runSuperShortcut(${idx})">ODPAL ALL</button>`;
@@ -197,8 +247,13 @@
 
         function runSuperShortcut(idx) {
             const sc = superShortcuts[idx];
-            // Pakowanie danych do formatu "SHORT_P:3,V:255,M:1;P:5,V:128,M:2;"
-            const cmd = "SHORT_" + sc.actions.map(a => `P:${a.pin},V:${a.val},M:${a.mode}`).join(';');
+            // Format: SHORT_P:3,V:255,M:1,ON:200,OFF:200;P:5,V:128,M:2,RAMP:1000;
+            const cmd = "SHORT_" + sc.actions.map(a => {
+                let params = `P:${a.pin},V:${a.val},M:${a.mode}`;
+                if (a.mode === '1') params += `,ON:${a.timeOn},OFF:${a.timeOff}`;
+                if (a.mode === '2') params += `,RAMP:${a.timeRamp}`;
+                return params;
+            }).join(';');
             sendData(cmd);
         }
 
@@ -222,6 +277,11 @@
             document.getElementById('readPin').value = "NONE"; 
             document.getElementById('liveDataDisplay').innerText = "---";
         }
+
+        // Inicjalizacja – ukrycie parametrów przy starcie
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleTimingParams();
+        });
     </script>
 </body>
 </html>
